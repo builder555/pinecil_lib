@@ -4,6 +4,7 @@ from ble import find_device_addresses, BLE
 from dataclasses import dataclass
 from test_utils import Method
 
+
 @dataclass
 class MockDevice:
     name: str
@@ -147,4 +148,6 @@ async def test_can_write_characteristic(mock_bleak_client, fake_services):
         first_crx = first_svc.characteristics[0]
 
         await ble.write_characteristic(first_crx, b"write_test")
-        assert Method(mock_bleak_client.write_gatt_char).was_called_with(first_crx, b"write_test")
+        assert Method(mock_bleak_client.write_gatt_char).was_called_with(
+            first_crx, b"write_test"
+        )

@@ -15,7 +15,7 @@ class DeviceDisconnectedException(Exception):
     message = "Device disconnected"
 
 
-async def find_device_addresses(name):
+async def find_device_addresses(name: str) -> List[str]:
     logging.info(f'Detecting "{name}"...')
     devices = await BleakScanner.discover()
     results = []
@@ -33,7 +33,7 @@ class BLE:
         self.__client = BleakClient(self.__address)
 
     @property
-    def is_connected(self):
+    def is_connected(self) -> bool:
         return self.__client.is_connected
 
     async def ensure_connected(self):
