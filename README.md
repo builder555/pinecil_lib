@@ -1,0 +1,9 @@
+- [ ] able to scan for ble devices
+- [ ] able to connect to pinecil
+- [ ] get pinecil info
+- [ ] get settings
+- [ ] set settings
+- [ ] ci/cd - build and push to pypi
+- [ ] run tests on build
+- [ ] run lint on build
+- [ ] proper readme
