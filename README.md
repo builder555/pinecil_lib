@@ -16,6 +16,8 @@ pip install pinecil
 
 ## Usage Example
 
+A complete from-scratch example:
+
 ```python
 from pinecil import find_pinecils # if running in a cloned repo, use `from src.pinecil`
 import asyncio
@@ -39,6 +41,26 @@ if __name__ == '__main__':
     asyncio.run(main())
 ```
 
+If you already know the address of your pinecil, you can use it directly:
+
+```python
+from pinecil import BLE, Pinecil
+import asyncio
+
+if __name__ == '__main__':
+    p = Pinecil(BLE('<your-address>'))
+    asyncio.run(p.get_all_settings())
+```
+
+To find addresses of all pinecils nearby:
+
+```python
+from pinecil import find_device_addresses
+import asyncio
+
+if __name__ == '__main__':
+    asyncio.run(find_device_addresses('pinecil'))
+```
 
 ## Testing
 

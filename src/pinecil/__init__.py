@@ -4,3 +4,4 @@ from .pinecil import (
     ValueOutOfRangeException,
     InvalidSettingException,
 )
+from .ble import find_device_addresses, BLE
