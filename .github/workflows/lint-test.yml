@@ -9,7 +9,7 @@ on:
       - master
 
 jobs:
-  build:
+  test-and-lint:
     runs-on: ubuntu-latest
 
     steps:

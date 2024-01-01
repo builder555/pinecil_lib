@@ -1,3 +1,5 @@
+[![Automated lint and tests](https://github.com/builder555/pinecil_lib/actions/workflows/lint-test.yml/badge.svg?branch=master)](https://github.com/builder555/pinecil_lib/actions/workflows/lint-test.yml)
+
 # Pinecil V2 interface library
 
 ## Overview
