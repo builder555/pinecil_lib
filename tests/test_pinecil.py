@@ -54,7 +54,7 @@ def mock_ble(mocked_settings, mocked_live_data):
 
 def test_device_not_connected_after_initializing(mock_ble):
     pinecil = Pinecil(mock_ble)
-    assert pinecil.is_connected == False
+    assert not pinecil.is_connected
 
 
 @pytest.mark.asyncio
@@ -74,7 +74,7 @@ async def test_after_connecting_device_loads_settings_ble_characteristics(mock_b
     assert Method(mock_ble.get_characteristics).was_called_with(
         "f6d80000-5a10-4eba-aa55-33e27f9bc533"
     )
-    assert mock_ble.read_characteristic.called == True
+    assert mock_ble.read_characteristic.called
 
 
 @pytest.mark.asyncio
@@ -169,14 +169,14 @@ async def test_updating_nonexistent_setting_fails(mock_ble):
 @pytest.mark.asyncio
 async def test_requesting_all_settings_frequently_returns_cached_values(mock_ble):
     pinecil = Pinecil(mock_ble)
-    assert mock_ble.read_characteristic.called == False
+    assert not mock_ble.read_characteristic.called
     await pinecil.connect()
     await pinecil.get_all_settings()
-    assert mock_ble.read_characteristic.called == True
+    assert mock_ble.read_characteristic.called
     mock_ble.read_characteristic.reset_mock()
     await pinecil.get_all_settings()
     await pinecil.get_all_settings()
-    assert mock_ble.read_characteristic.called == False
+    assert not mock_ble.read_characteristic.called
 
 
 @pytest.mark.asyncio
@@ -188,14 +188,14 @@ async def test_requesting_all_settings_after_2s_gets_values_from_device(
     mock_time.return_value = 100
     await pinecil.connect()
     await pinecil.get_all_settings()
-    assert mock_ble.read_characteristic.called == True
+    assert mock_ble.read_characteristic.called
     mock_ble.read_characteristic.reset_mock()
     mock_time.return_value = 101
     await pinecil.get_all_settings()
-    assert mock_ble.read_characteristic.called == False
+    assert not mock_ble.read_characteristic.called
     mock_time.return_value = 102
     await pinecil.get_all_settings()
-    assert mock_ble.read_characteristic.called == True
+    assert mock_ble.read_characteristic.called
 
 
 @pytest.mark.asyncio
@@ -222,7 +222,7 @@ async def test_get_live_data(mock_ble, mocked_live_data):
 @pytest.mark.asyncio
 async def test_reading_live_data_while_disconnected_reconnects(mock_ble):
     pinecil = Pinecil(mock_ble)
-    assert pinecil.is_connected == False
+    assert not pinecil.is_connected
     await pinecil.get_live_data()
     assert pinecil.is_connected
 

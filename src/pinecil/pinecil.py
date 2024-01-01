@@ -130,7 +130,7 @@ class Pinecil:
         number = struct.unpack("<H", raw_value)[0]
         return self.settings_map.get_name(crx.uuid), number
 
-    async def __get_pinecil_info(self):
+    async def __get_pinecil_info(self) -> Tuple[str, str]:
         try:
             device_id = ""
             build_version = ""
@@ -147,7 +147,7 @@ class Pinecil:
                     raw_value = await self.ble.read_characteristic(crx)
                     build_version = raw_value.decode("utf-8").strip("v")
             return device_id, build_version
-        except:
+        except Exception:
             return "", ""
 
     async def get_all_settings(self) -> Dict[str, int]:
@@ -157,7 +157,7 @@ class Pinecil:
         if time.time() - self.__last_read_settings_time < 2:
             return self.__last_read_settings
         try:
-            logging.info(f"Reading all settings")
+            logging.info("Reading all settings")
             self.is_getting_settings = True
             if not self.is_connected:
                 await self.connect()
@@ -167,7 +167,7 @@ class Pinecil:
             ]
             results = await asyncio.gather(*tasks)
             settings = dict(results)
-            logging.info(f"Reading all settings DONE")
+            logging.info("Reading all settings DONE")
             self.__last_read_settings = settings
             self.__last_read_settings_time = time.time()
             return settings
@@ -241,11 +241,11 @@ class Pinecil:
         return dict(zip(values_map, values))
 
     async def get_live_data(self) -> Dict[str, int]:
-        logging.debug(f"GETTING ALL LIVE VALUES")
+        logging.debug("GETTING ALL LIVE VALUES")
         if not self.is_connected:
             await self.connect()
         values = await self.__read_live_data(self.crx_bulk_data)
-        logging.debug(f"GETTING ALL LIVE VALUES DONE")
+        logging.debug("GETTING ALL LIVE VALUES DONE")
         return values
 
 

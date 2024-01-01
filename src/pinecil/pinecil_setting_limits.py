@@ -1,4 +1,5 @@
-# values copied from https://github.com/Ralim/IronOS/blob/662829ebd9530e83c460f7c5dfcd2d0ea8ff401e/source/Core/Src/Settings.cpp
+# values copied from
+# https://github.com/Ralim/IronOS/blob/662829eb/source/Core/Src/Settings.cpp
 MAX_TEMP_C = 450
 MAX_TEMP_F = 850
 MIN_TEMP_C = 10
