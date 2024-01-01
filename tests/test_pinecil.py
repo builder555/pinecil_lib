@@ -1,11 +1,16 @@
 import pytest
-from unittest.mock import AsyncMock, MagicMock
-from pinecil import Pinecil, ValueOutOfRangeException, InvalidSettingException
+from unittest.mock import AsyncMock, MagicMock, patch
+from pinecil import (
+    Pinecil,
+    find_pinecils,
+    ValueOutOfRangeException,
+    InvalidSettingException,
+)
 from test_data import settings as fake_settings
 from test_data import live_data as fake_live_data
 from test_utils import Method
 import struct
-import asyncio
+
 
 @pytest.fixture
 def mocked_settings():
@@ -27,7 +32,6 @@ def mock_ble(mocked_settings, mocked_live_data):
         return []
 
     async def read_crx(a):
-        print('reading value', a)
         return a.raw_value
 
     mock_services = [
@@ -43,7 +47,7 @@ def mock_ble(mocked_settings, mocked_live_data):
     ble.get_characteristics = AsyncMock(side_effect=get_characteristics)
     ble.get_services = AsyncMock(return_value=mock_services)
     ble.ensure_connected = AsyncMock(side_effect=fake_connect)
-    ble.read_characteristic = read_crx
+    ble.read_characteristic = AsyncMock(side_effect=read_crx)
     ble.write_characteristic = AsyncMock()
     return ble
 
@@ -54,12 +58,23 @@ def test_device_not_connected_after_initializing(mock_ble):
 
 
 @pytest.mark.asyncio
+async def test_find_all_pinecils():
+    with patch(
+        "pinecil.pinecil.find_device_addresses", return_value=["00:11:22:33:44:55"]
+    ):
+        devices = await find_pinecils()
+        assert len(devices) == 1
+        assert isinstance(devices[0], Pinecil)
+
+
+@pytest.mark.asyncio
 async def test_after_connecting_device_loads_settings_ble_characteristics(mock_ble):
     pinecil = Pinecil(mock_ble)
     await pinecil.connect()
     assert Method(mock_ble.get_characteristics).was_called_with(
         "f6d80000-5a10-4eba-aa55-33e27f9bc533"
     )
+    assert mock_ble.read_characteristic.called == True
 
 
 @pytest.mark.asyncio
@@ -150,28 +165,38 @@ async def test_updating_nonexistent_setting_fails(mock_ble):
     with pytest.raises(InvalidSettingException):
         await pinecil.set_one_setting("ThisSettingDoesNotExist", 50)
 
+
 @pytest.mark.asyncio
 async def test_requesting_all_settings_frequently_returns_cached_values(mock_ble):
     pinecil = Pinecil(mock_ble)
+    assert mock_ble.read_characteristic.called == False
     await pinecil.connect()
     await pinecil.get_all_settings()
-    assert mock_ble.get_characteristics.called == True
-    mock_ble.get_characteristics.reset_mock()
+    assert mock_ble.read_characteristic.called == True
+    mock_ble.read_characteristic.reset_mock()
     await pinecil.get_all_settings()
     await pinecil.get_all_settings()
-    assert mock_ble.get_characteristics.called == False
+    assert mock_ble.read_characteristic.called == False
 
-@pytest.mark.focus
+
 @pytest.mark.asyncio
-async def test_requesting_all_settings_after_5s_requests_values(mock_ble):
+@patch("time.time")
+async def test_requesting_all_settings_after_2s_gets_values_from_device(
+    mock_time, mock_ble
+):
     pinecil = Pinecil(mock_ble)
+    mock_time.return_value = 100
     await pinecil.connect()
     await pinecil.get_all_settings()
-    assert mock_ble.get_characteristics.called == True
-    await asyncio.sleep(3)
-    mock_ble.get_characteristics.reset_mock()
+    assert mock_ble.read_characteristic.called == True
+    mock_ble.read_characteristic.reset_mock()
+    mock_time.return_value = 101
     await pinecil.get_all_settings()
-    assert mock_ble.get_characteristics.called == True
+    assert mock_ble.read_characteristic.called == False
+    mock_time.return_value = 102
+    await pinecil.get_all_settings()
+    assert mock_ble.read_characteristic.called == True
+
 
 @pytest.mark.asyncio
 async def test_get_live_data(mock_ble, mocked_live_data):
@@ -243,7 +268,3 @@ async def test_get_info_returns_2_20_build_for_older_versions(mock_ble_v220):
     await pinecil.connect()
     info = await pinecil.get_info()
     assert info["build"] == "2.20"
-
-
-# def test_get_unique_device_name():
-#     pass

@@ -6,14 +6,66 @@ Pinecil is a lightweight Python library designed to inetrafce with Pinecil V2 so
 ## Requirements
 - Python 3.10 or higher
 
+## Installation -- DOES NOT WORK YET
+
+until PyPi restores functionality, I cannot publish this library
+
+```bash
+pip install pinecil
+```
+
+## Usage Example
+
+```python
+from pinecil import find_pinecils # if running in a cloned repo, use `from src.pinecil`
+import asyncio
+
+async def main():
+    await devices = find_pinecils()
+    iron = devices[0]
+    await iron.connect()
+    settings = await iron.get_all_settings()
+    await iron.set_one_setting('SetTemperature', 250)
+    await iron.save_to_flash() # this is required to preserve settings after powering off
+    info = await iron.get_info()
+    live = await iron.get_live_data()
+    print(settings)
+    print('----------')
+    print(info)
+    print('----------')
+    print(live)
+
+if __name__ == '__main__':
+    asyncio.run(main())
+```
+
+
+## Testing
+
+```bash
+poetry shell
+pytest -v
+# for development convenience:
+ptw --runner 'pytest -v'
+```
+
+## License
+This project is licensed under the MIT-0 License
+
+## Authors
+- **[builder555](https://github.com/builder555)** - *Initial work*
+
+## References
+- Originally started as [PineSAM](https://github.com/builder555/PineSAM)
+
 ## TODO
 
 - [x] able to scan for ble devices
-- [ ] able to connect to pinecil
-- [ ] get pinecil info
-- [ ] get settings
-- [ ] set settings
+- [x] able to connect to pinecil
+- [x] get pinecil info
+- [x] get settings
+- [x] set settings
+- [x] proper readme
 - [ ] ci/cd - build and push to pypi
 - [ ] run tests on build
 - [ ] run lint on build
-- [ ] proper readme

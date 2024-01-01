@@ -2,17 +2,20 @@ from typing import List, Tuple, Dict
 import struct
 import logging
 import asyncio
-from pinecil_setting_limits import value_limits
-from pinecil_setting_limits import temperature_limits
-from crx_uuid_name_map import (
+from .pinecil_setting_limits import value_limits
+from .pinecil_setting_limits import temperature_limits
+from .crx_uuid_name_map import (
     names_v220,
     names_v221beta1,
     names_v221beta2,
     bulk_data_names_v220,
     bulk_data_names_v221beta2,
 )
-from ble import BleakGATTCharacteristic
-from ble import BLE
+from .ble import (
+    BleakGATTCharacteristic,
+    BLE,
+    find_device_addresses,
+)
 import time
 
 
@@ -150,13 +153,10 @@ class Pinecil:
     async def get_all_settings(self) -> Dict[str, int]:
         logging.info("REQUEST FOR SETTINGS")
         while self.is_getting_settings:
-            print('waiting to complete settings requests')
             await asyncio.sleep(0.5)
         if time.time() - self.__last_read_settings_time < 2:
-            print('returning cached values')
             return self.__last_read_settings
         try:
-            print('reading settings!!')
             logging.info(f"Reading all settings")
             self.is_getting_settings = True
             if not self.is_connected:
@@ -166,7 +166,6 @@ class Pinecil:
                 for crx in self.crx_settings
             ]
             results = await asyncio.gather(*tasks)
-            print('gathered tasks:', results)
             settings = dict(results)
             logging.info(f"Reading all settings DONE")
             self.__last_read_settings = settings
@@ -221,7 +220,7 @@ class Pinecil:
 
     async def __read_live_data(self, crx: BleakGATTCharacteristic) -> Dict[str, int]:
         raw_value = await self.ble.read_characteristic(crx)
-        num_of_values = len(raw_value) >> 2  # divide by 4
+        num_of_values = len(raw_value) >> 2
         values = struct.unpack(f"<{num_of_values}I", raw_value)
         values_map = [
             "LiveTemp",
@@ -263,3 +262,8 @@ def ensure_setting_value_within_limits(name: str, value: int):
             f"Value {value} is out of range for setting {name} ({min_val}-{max_val})"
         )
         raise ValueOutOfRangeException
+
+
+async def find_pinecils() -> List[Pinecil]:
+    devs = await find_device_addresses("pinecil")
+    return [Pinecil(BLE(dev)) for dev in devs]
