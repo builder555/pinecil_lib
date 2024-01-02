@@ -1,0 +1,132 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  test-and-lint:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        pip install poetry
+        poetry install
+
+    - name: Run pytest
+      run: poetry run pytest
+
+    - name: Run flake8
+      run: poetry run flake8
+
+  increment-version:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Increment version
+      id: increment-version
+      run: |
+        raw_commits=$(cat <<EOFF 
+          ${{ toJSON(github.event.commits) }} 
+        EOFF)
+        commits=$(echo "$raw_commits" | jq ".[].message" | tr -d '"')
+        read major minor patch <<< $(grep '^version =' pyproject.toml | awk -F '"' '{print $2}' | awk -F '.' '{print $1" "$2" "$3}')
+        readarray -t commit_messages <<< "$commits"
+        is_incremented=0
+        for COMMIT_MESSAGE in "${commit_messages[@]}"; do
+          if [[ "$COMMIT_MESSAGE" == "fix:"* ]]; then
+            is_incremented=1
+            patch=$((patch + 1))
+          elif [[ "$COMMIT_MESSAGE" == "feat:"* ]]; then
+            is_incremented=1
+            minor=$((minor + 1))
+            patch=0
+          elif [[ "$COMMIT_MESSAGE" == "fix!"* ]] || [[ "$COMMIT_MESSAGE" == "feat!"* ]]; then
+            is_incremented=1
+            major=$((major + 1))
+            minor=0
+            patch=0
+          fi
+        done
+        sed -i.bak "s/^version = .*/version = \"$major.$minor.$patch\"/" pyproject.toml
+        echo "tag=v$major.$minor.$patch" >> $GITHUB_OUTPUT
+        echo "is_incremented=$is_incremented" >> $GITHUB_OUTPUT
+
+    - name: Commit version changes
+      if: ${{ steps.increment-version.outputs.is_incremented != 0 }}
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git add pyproject.toml
+        git commit -m "chore: bump version to ${{ steps.increment-version.outputs.tag }}"
+        git tag ${{ steps.increment-version.outputs.tag }}
+    
+    - name: Push changes
+      if: ${{ steps.increment-version.outputs.is_incremented != 0 }}
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: ${{ github.ref }}
+        tags: true
+
+  build:
+    needs: increment-version
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        pip install poetry
+        poetry install
+
+    - name: Build package
+      run: poetry build
+
+    - name: Store the distribution packages
+      uses: actions/upload-artifact@v4
+      with:
+        name: python-package-distributions
+        path: dist/
+
+  # publish-to-pypi:
+  #   name: >-
+  #     Publish Python 🐍 distribution 📦 to PyPI
+  #   if: startsWith(github.ref, 'refs/tags/')  # only publish to PyPI on tag pushes
+  #   needs:
+  #   - build
+  #   runs-on: ubuntu-latest
+  #   environment:
+  #     name: pypi
+  #     url: https://pypi.org/p/pinecil
+  #   permissions:
+  #     id-token: write
+  #   steps:
+  #   - name: Download all the dists
+  #     uses: actions/download-artifact@v4
+  #     with:
+  #       name: python-package-distributions
+  #       path: dist/
+  #   - name: Publish distribution 📦 to PyPI
+  #     uses: pypa/gh-action-pypi-publish@release/v1

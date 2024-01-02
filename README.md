@@ -8,9 +8,7 @@ Pinecil is a lightweight Python library designed to inetrafce with Pinecil V2 so
 ## Requirements
 - Python 3.10 or higher
 
-## Installation -- DOES NOT WORK YET
-
-until PyPi restores functionality, I cannot publish this library
+## Installation
 
 ```bash
 pip install pinecil
@@ -90,6 +88,7 @@ This project is licensed under the MIT-0 License
 - [x] get settings
 - [x] set settings
 - [x] proper readme
+- [x] run build on merge
+- [x] run tests on merge
+- [x] run lint on merge
 - [ ] ci/cd - build and push to pypi
-- [ ] run tests on build
-- [ ] run lint on build
