@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pinecil"
-version = "0.1.1"
+version = "0.1.2"
 description = "A python interface for Pinecil V2 controls and settings."
 authors = ["builder555 <85308587+builder555@users.noreply.github.com>"]
 license = "MIT-0"
