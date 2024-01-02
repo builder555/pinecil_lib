@@ -1,4 +1,4 @@
-[![Automated lint and tests](https://github.com/builder555/pinecil_lib/actions/workflows/lint-test.yml/badge.svg?branch=master)](https://github.com/builder555/pinecil_lib/actions/workflows/lint-test.yml)
+[![Automated lint and tests](https://github.com/builder555/pinecil_lib/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/builder555/pinecil_lib/actions/workflows/ci.yml)
 
 # Pinecil V2 interface library
 
