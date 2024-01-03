@@ -7,7 +7,7 @@ license = "MIT-0"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.13"
+python = ">=3.9,<3.13"
 bleak = "^0.21.1"
 
 
