@@ -6,7 +6,8 @@
 Pinecil is a lightweight Python library designed to inetrafce with Pinecil V2 soldering iron.
 
 ## Requirements
-- Python 3.10 or higher
+- Python 3.9 or higher
+- bluez
 
 ## Installation
 
@@ -91,4 +92,4 @@ This project is licensed under the MIT-0 License
 - [x] run build on merge
 - [x] run tests on merge
 - [x] run lint on merge
-- [ ] ci/cd - build and push to pypi
+- [x] ci/cd - build and push to pypi
