@@ -80,16 +80,3 @@ This project is licensed under the MIT-0 License
 
 ## References
 - Originally started as [PineSAM](https://github.com/builder555/PineSAM)
-
-## TODO
-
-- [x] able to scan for ble devices
-- [x] able to connect to pinecil
-- [x] get pinecil info
-- [x] get settings
-- [x] set settings
-- [x] proper readme
-- [x] run build on merge
-- [x] run tests on merge
-- [x] run lint on merge
-- [x] ci/cd - build and push to pypi
