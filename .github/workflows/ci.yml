@@ -31,65 +31,33 @@ jobs:
     - name: Run flake8
       run: poetry run flake8
 
-  increment-version:
+  semver-action:
     needs: test-and-lint
     outputs:
-      is_incremented: ${{ steps.increment-version.outputs.is_incremented }}
+      tag: ${{ steps.semver-action.outputs.tag }}
+      version: ${{ steps.semver-action.outputs.version }}
+      release_notes: ${{ steps.semver-action.outputs.release_notes }}
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    - name: Increment version
-      id: increment-version
-      run: |
-        raw_commits=$(cat <<EOFF 
-          ${{ toJSON(github.event.commits) }} 
-        EOFF)
-        commits=$(echo "$raw_commits" | jq ".[].message" | tr -d '"')
-        read major minor patch <<< $(grep '^version =' pyproject.toml | awk -F '"' '{print $2}' | awk -F '.' '{print $1" "$2" "$3}')
-        readarray -t commit_messages <<< "$commits"
-        is_incremented=0
-        for COMMIT_MESSAGE in "${commit_messages[@]}"; do
-          if [[ "$COMMIT_MESSAGE" == "fix:"* ]]; then
-            is_incremented=1
-            patch=$((patch + 1))
-          elif [[ "$COMMIT_MESSAGE" == "feat:"* ]]; then
-            is_incremented=1
-            minor=$((minor + 1))
-            patch=0
-          elif [[ "$COMMIT_MESSAGE" == "fix!"* ]] || [[ "$COMMIT_MESSAGE" == "feat!"* ]]; then
-            is_incremented=1
-            major=$((major + 1))
-            minor=0
-            patch=0
-          fi
-        done
-        sed -i.bak "s/^version = .*/version = \"$major.$minor.$patch\"/" pyproject.toml
-        echo "tag=v$major.$minor.$patch" >> $GITHUB_OUTPUT
-        echo "is_incremented=$is_incremented" >> $GITHUB_OUTPUT
-
-    - name: Commit version changes
-      if: ${{ steps.increment-version.outputs.is_incremented != 0 }}
-      run: |
-        git config --local user.email "github-actions[bot]@users.noreply.github.com"
-        git config --local user.name "github-actions[bot]"
-        git add pyproject.toml
-        git commit -m "chore: bump version to ${{ steps.increment-version.outputs.tag }}"
-        git tag ${{ steps.increment-version.outputs.tag }}
-    
-    - name: Push changes
-      if: ${{ steps.increment-version.outputs.is_incremented != 0 }}
-      uses: ad-m/github-push-action@master
       with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        branch: ${{ github.ref }}
-        tags: true
+        fetch-depth: 0
 
-  build:
-    needs: increment-version
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Semver Action
+      id: semver-action
+      run: python .github/scripts/semver.py
+  
+  build-and-release:
+    needs: semver-action
     runs-on: ubuntu-latest
-
+    if: needs.semver-action.outputs.version != ''
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -99,27 +67,52 @@ jobs:
       with:
         python-version: '3.10'
 
-    - name: Install dependencies
+    - name: Update pyproject.toml version
       run: |
         pip install poetry
-        poetry install
+        poetry version ${{ needs.semver-action.outputs.version }}
+
+    - name: Commit version changes
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git add pyproject.toml
+        git commit -m "chore: bump version to ${{ needs.semver-action.outputs.tag }}"
+        git tag ${{ needs.semver-action.outputs.tag }}
+    
+    - name: Push changes
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: ${{ github.ref }}
+        tags: true
 
     - name: Build package
       run: poetry build
-
+    
     - name: Store the distribution packages
       uses: actions/upload-artifact@v4
       with:
         name: python-package-distributions
         path: dist/
 
+    - name: Create Release
+      id: create-release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ needs.semver-action.outputs.tag }}
+        body: ${{ needs.semver-action.outputs.release_notes }}
+        files: |
+          dist/*.whl
+          dist/*.tar.gz
+
   publish-to-pypi:
     name: >-
       Publish Python 🐍 distribution 📦 to PyPI
-    if: ${{ needs.increment-version.outputs.is_incremented != 0 }}
+    if: needs.semver-action.outputs.version != ''
     needs:
-    - build
-    - increment-version
+    - build-and-release
+    - semver-action
     runs-on: ubuntu-latest
     environment:
       name: pypi
