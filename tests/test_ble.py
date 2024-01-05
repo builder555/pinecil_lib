@@ -77,12 +77,17 @@ def mock_bleak_client(fake_services):
     def set_disconnected_callback(callback):
         client.trigger_disconnect = partial(callback, client)
 
+    def client_initializer(*a, **kw):
+        if kw.get('disconnected_callback'):
+            set_disconnected_callback(kw['disconnected_callback'])
+        return client
+
     client.connect = AsyncMock(side_effect=fake_connect)
     client.services = fake_services
     client.read_gatt_char = AsyncMock(return_value=b"test")
     client.write_gatt_char = AsyncMock()
-    client.set_disconnected_callback = set_disconnected_callback
-    with patch("pinecil.ble.BleakClient", return_value=client):
+
+    with patch("pinecil.ble.BleakClient", side_effect=client_initializer):
         yield client
 
 
