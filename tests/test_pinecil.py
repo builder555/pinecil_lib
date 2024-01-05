@@ -236,6 +236,12 @@ async def test_get_pinecil_info(mock_ble, mocked_live_data):
     assert info["id"] == mocked_live_data[2].expected_value
     assert info["name"] == f'Pinecil-{info["id"]}'
 
+@pytest.mark.asyncio
+async def test_get_pinecil_info_while_disconnected_reconnects(mock_ble):
+    pinecil = Pinecil(mock_ble)
+    assert not pinecil.is_connected
+    await pinecil.get_info()
+    assert pinecil.is_connected
 
 @pytest.fixture
 def mock_ble_v220(mocked_settings, mocked_live_data):

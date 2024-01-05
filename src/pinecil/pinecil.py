@@ -212,6 +212,8 @@ class Pinecil:
         await self.set_one_setting("save_to_flash", 1)
 
     async def get_info(self):
+        if not self.is_connected:
+            await self.connect()
         return {
             "name": f"Pinecil-{self.unique_id}",
             "id": self.unique_id,
