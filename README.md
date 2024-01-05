@@ -24,7 +24,7 @@ from pinecil import find_pinecils # if running in a cloned repo, use `from src.p
 import asyncio
 
 async def main():
-    await devices = find_pinecils()
+    devices = await find_pinecils()
     iron = devices[0]
     await iron.connect()
     settings = await iron.get_all_settings()
