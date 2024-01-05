@@ -1,6 +1,7 @@
+from functools import partial
 import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
-from pinecil.ble import find_device_addresses, BLE
+from pinecil.ble import find_device_addresses, BLE, DeviceDisconnectedException
 from dataclasses import dataclass
 from test_utils import Method
 
@@ -73,10 +74,14 @@ def mock_bleak_client(fake_services):
     def fake_connect():
         client.is_connected = True
 
+    def set_disconnected_callback(callback):
+        client.trigger_disconnect = partial(callback, client)
+
     client.connect = AsyncMock(side_effect=fake_connect)
     client.services = fake_services
     client.read_gatt_char = AsyncMock(return_value=b"test")
     client.write_gatt_char = AsyncMock()
+    client.set_disconnected_callback = set_disconnected_callback
     with patch("pinecil.ble.BleakClient", return_value=client):
         yield client
 
@@ -147,3 +152,10 @@ async def test_can_write_characteristic(mock_bleak_client, fake_services):
     assert Method(mock_bleak_client.write_gatt_char).was_called_with(
         first_crx, b"write_test"
     )
+
+@pytest.mark.asyncio
+async def test_can_detect_disconnected_device(mock_bleak_client, fake_services):
+    ble = BLE("00:11:22:33:44:55")
+    mock_bleak_client.is_connected = True
+    with pytest.raises(DeviceDisconnectedException):
+        mock_bleak_client.trigger_disconnect()
