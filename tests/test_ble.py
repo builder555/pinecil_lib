@@ -161,6 +161,8 @@ async def test_can_write_characteristic(mock_bleak_client, fake_services):
 
 @pytest.mark.asyncio
 async def test_can_detect_disconnected_device(mock_bleak_client, fake_services):
+    ble = BLE("00:11:22:33:44:55")
     mock_bleak_client.is_connected = True
     with pytest.raises(DeviceDisconnectedException):
         mock_bleak_client.trigger_disconnect()
+        await ble.get_services()
