@@ -30,12 +30,14 @@ async def find_device_addresses(name: str) -> List[str]:
 class BLE:
     def __init__(self, address: str):
         self.__address = address
-        self.__client = BleakClient(self.__address, disconnected_callback=self.__on_disconnected)
+        self.__client = BleakClient(
+            self.__address, disconnected_callback=self.__on_disconnected
+        )
 
     @property
     def is_connected(self) -> bool:
         return self.__client.is_connected
-    
+
     def __on_disconnected(self, client: BleakClient):
         logging.info(f"Disconnected from {self.__address}")
         raise DeviceDisconnectedException

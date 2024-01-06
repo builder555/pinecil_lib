@@ -78,8 +78,8 @@ def mock_bleak_client(fake_services):
         client.trigger_disconnect = partial(callback, client)
 
     def client_initializer(*a, **kw):
-        if kw.get('disconnected_callback'):
-            set_disconnected_callback(kw['disconnected_callback'])
+        if kw.get("disconnected_callback"):
+            set_disconnected_callback(kw["disconnected_callback"])
         return client
 
     client.connect = AsyncMock(side_effect=fake_connect)
@@ -158,9 +158,9 @@ async def test_can_write_characteristic(mock_bleak_client, fake_services):
         first_crx, b"write_test"
     )
 
+
 @pytest.mark.asyncio
 async def test_can_detect_disconnected_device(mock_bleak_client, fake_services):
-    ble = BLE("00:11:22:33:44:55")
     mock_bleak_client.is_connected = True
     with pytest.raises(DeviceDisconnectedException):
         mock_bleak_client.trigger_disconnect()
