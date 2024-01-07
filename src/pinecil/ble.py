@@ -29,6 +29,11 @@ async def find_device_addresses(name: str) -> List[str]:
 
 class BLE:
     def __init__(self, address: str):
+        """BLE device wrapper
+
+        Args:
+            address (str): MAC address of the device (or uuid for mac os)
+        """
         self.__address = address
         self.__client = BleakClient(
             self.__address, disconnected_callback=self.__on_disconnected
@@ -43,6 +48,11 @@ class BLE:
         raise DeviceDisconnectedException
 
     async def ensure_connected(self):
+        """Connects to the device if not connected, otherwise does nothing
+
+        Raises:
+            DeviceNotFoundException: If the device is gone.
+        """
         try:
             if self.__client.is_connected:
                 return
@@ -52,12 +62,28 @@ class BLE:
             raise DeviceNotFoundException
 
     async def get_services(self) -> List[str]:
+        """Get list of services available on the device
+
+        Returns:
+            List[str]: List of service uuids
+        """
         await self.ensure_connected()
         return [s.uuid for s in self.__client.services]
 
     async def get_characteristics(
         self, service_uuid: str
     ) -> List[BleakGATTCharacteristic]:
+        """Get list of characteristics available on the service
+
+        Args:
+            service_uuid (str): Service uuid
+
+        Raises:
+            Exception: If the service is not found
+
+        Returns:
+            List[BleakGATTCharacteristic]: Characteristics handles
+        """
         await self.ensure_connected()
         service = self.__client.services.get_service(service_uuid)
         if service:
@@ -65,6 +91,18 @@ class BLE:
         raise Exception(f"Could not find service {service_uuid}")
 
     async def read_characteristic(self, handle: BleakGATTCharacteristic) -> bytes:
+        """Reads the value of the characteristic
+
+        Args:
+            handle (BleakGATTCharacteristic): Characteristic handle
+
+        Raises:
+            DeviceDisconnectedException: If the device is disconnected
+            Exception: Any other exception
+
+        Returns:
+            bytes: Value of the characteristic
+        """
         try:
             await self.ensure_connected()
             return await self.__client.read_gatt_char(handle)
@@ -77,6 +115,12 @@ class BLE:
             raise e
 
     async def write_characteristic(self, handle: BleakGATTCharacteristic, value: bytes):
+        """Writes the value to the characteristic
+
+        Args:
+            handle (BleakGATTCharacteristic): Characteristic handle
+            value (bytes): Value to write
+        """
         await self.ensure_connected()
         logging.debug(f"Writing characteristic {handle.uuid}")
         await self.__client.write_gatt_char(handle, value)

@@ -67,6 +67,11 @@ class BulkDataToUUIDMap:
 
 class Pinecil:
     def __init__(self, ble: BLE):
+        """Pinecil class
+
+        Args:
+            ble (BLE): instance of BLE connection to Pinecil
+        """
         self.ble = ble
         self.settings_uuid: str
         self.bulk_data_uuid: str
@@ -84,7 +89,12 @@ class Pinecil:
         self.build_version = ""
 
     @property
-    def is_connected(self):
+    def is_connected(self) -> bool:
+        """Whether the Pinecil is connected
+
+        Returns:
+            bool: True if connected, False otherwise
+        """
         return self.ble.is_connected and self.is_initialized
 
     async def __set_ble_uuids_based_on_version(self):
@@ -113,6 +123,10 @@ class Pinecil:
         self.bulk_data_uuid = uuid_bulk_data_pre_221
 
     async def connect(self):
+        """Attempts to connect to Pinecil
+        Raises:
+            DeviceNotFoundException: If Pinecil is not found
+        """
         await self.ble.ensure_connected()
         await self.__set_ble_uuids_based_on_version()
 
@@ -151,6 +165,11 @@ class Pinecil:
             return "", ""
 
     async def get_all_settings(self) -> Dict[str, int]:
+        """Gets all settings from Pinecil
+
+        Returns:
+            Dict[str, int]: key-value pairs of setting name and value
+        """
         logging.info("REQUEST FOR SETTINGS")
         while self.is_getting_settings:
             await asyncio.sleep(0.5)
@@ -176,7 +195,7 @@ class Pinecil:
         finally:
             self.is_getting_settings = False
 
-    async def __ensure_valid_temperature(self, setting, temperature):
+    async def __ensure_valid_temperature(self, setting: str, temperature: int):
         characteristics = await self.ble.get_characteristics(self.settings_uuid)
         temp_uuid = self.settings_map.get_uuid(self.temp_unit_crx)
         for crx in characteristics:
@@ -191,7 +210,17 @@ class Pinecil:
                     raise ValueOutOfRangeException
                 break
 
-    async def set_one_setting(self, setting, value):
+    async def set_one_setting(self, setting: str, value: int):
+        """Sets one setting on Pinecil.
+        Does not save to flash (changes will be lost after reboot).
+
+        Args:
+            setting (str): name of the setting
+            value (int): value to set
+
+        Raises:
+            Exception: when trying to set a setting that does not exist
+        """
         ensure_setting_exists(setting)
         ensure_setting_value_within_limits(setting, value)
         if not self.is_connected:
@@ -202,16 +231,24 @@ class Pinecil:
         uuid = self.settings_map.get_uuid(setting)
         for crx in self.crx_settings:
             if crx.uuid == uuid:
-                value = struct.pack("<H", value)
-                await self.ble.write_characteristic(crx, bytearray(value))
+                v = struct.pack("<H", value)
+                await self.ble.write_characteristic(crx, bytearray(v))
                 break
         else:
             raise Exception("Setting not found")
 
     async def save_to_flash(self):
+        """Saves current settings to flash - settings will be preserved after reboot."""
         await self.set_one_setting("save_to_flash", 1)
 
-    async def get_info(self):
+    async def get_info(self) -> Dict[str, str]:
+        """Get basic info about Pinecil
+
+        Returns:
+            Dict[str, str]: key-value pairs of info.
+        Example:
+            {"name": "Pinecil-123456", "id": "123456", "build": "2.20"}
+        """
         if not self.is_connected:
             await self.connect()
         return {
@@ -243,6 +280,28 @@ class Pinecil:
         return dict(zip(values_map, values))
 
     async def get_live_data(self) -> Dict[str, int]:
+        """Retrieves live data from Pinecil.
+
+        Returns:
+            Dict[str, int]: key-value pairs of live data.
+            Example:
+            {
+                "LiveTemp": 35
+                "SetTemp": 320
+                "Voltage": 199
+                "HandleTemp": 299
+                "PWMLevel": 0
+                "PowerSource": 3
+                "TipResistance": 80
+                "Uptime": 639707
+                "MovementTime": 593
+                "MaxTipTempAbility": 452
+                "uVoltsTip": 1063
+                "HallSensor": 41
+                "OperatingMode": 0
+                "Watts": 0
+            }
+        """
         logging.debug("GETTING ALL LIVE VALUES")
         if not self.is_connected:
             await self.connect()
@@ -267,5 +326,10 @@ def ensure_setting_value_within_limits(name: str, value: int):
 
 
 async def find_pinecils() -> List[Pinecil]:
-    devs = await find_device_addresses("pinecil")
-    return [Pinecil(BLE(dev)) for dev in devs]
+    """Looks for BLE devices that have 'pinecil' in their name.
+
+    Returns:
+        List[Pinecil]: A list of available devices
+    """
+    addresses = await find_device_addresses("pinecil")
+    return [Pinecil(BLE(a)) for a in addresses]
