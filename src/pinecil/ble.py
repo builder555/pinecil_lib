@@ -5,6 +5,7 @@ from bleak import BleakScanner
 from bleak.exc import BleakDeviceNotFoundError
 from bleak.exc import BleakError
 from bleak.backends.characteristic import BleakGATTCharacteristic
+import asyncio
 
 
 class DeviceNotFoundException(Exception):
@@ -57,7 +58,7 @@ class BLE:
             if self.__client.is_connected:
                 return
             await self.__client.connect()
-        except BleakDeviceNotFoundError:
+        except (BleakDeviceNotFoundError, asyncio.exceptions.TimeoutError):
             logging.info(f'Could not find device with "{self.__address}" address')
             raise DeviceNotFoundException
 
