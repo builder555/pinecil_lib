@@ -61,6 +61,13 @@ class BLE:
         except (BleakDeviceNotFoundError, asyncio.exceptions.TimeoutError):
             logging.info(f'Could not find device with "{self.__address}" address')
             raise DeviceNotFoundException
+        except BleakError as e:
+            err_msg = str(e).lower()
+            if "disconnected" in err_msg or "turned off" in err_msg:
+                logging.info(f'Could not find device with "{self.__address}" address')
+                raise DeviceNotFoundException
+            else:
+                raise e
 
     async def get_services(self) -> List[str]:
         """Get list of services available on the device

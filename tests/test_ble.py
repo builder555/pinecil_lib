@@ -7,6 +7,7 @@ from pinecil.ble import (
     DeviceDisconnectedException,
     BleakDeviceNotFoundError,
     DeviceNotFoundException,
+    BleakError,
 )
 from dataclasses import dataclass
 from test_utils import Method
@@ -86,12 +87,25 @@ def mock_nodevice_bleak_client():
 
 
 @pytest.fixture
-def mock_timeout_bleak_client():
+def mock_bleak_client_timeout():
     client = MagicMock()
     client.is_connected = False
-    client.__address = ""
 
     client.connect = AsyncMock(side_effect=asyncio.exceptions.TimeoutError)
+
+    with patch("pinecil.ble.BleakClient", side_effect=lambda *a, **kw: client):
+        yield client
+
+
+@pytest.fixture
+def mock_bleak_client_with_disconnect():
+    client = MagicMock()
+    client.is_connected = False
+
+    def raise_bleak_disconnect():
+        raise BleakError("disconnected")
+
+    client.connect = AsyncMock(side_effect=raise_bleak_disconnect)
 
     with patch("pinecil.ble.BleakClient", side_effect=lambda *a, **kw: client):
         yield client
@@ -154,7 +168,17 @@ async def test_ble_raises_exception_when_device_not_found(mock_nodevice_bleak_cl
 
 @pytest.mark.asyncio
 async def test_ble_raises_exception_when_async_timeout_reached_while_connecting(
-    mock_timeout_bleak_client,
+    mock_bleak_client_timeout,
+):
+    ble = BLE("00:11:22:33:44:55")
+    assert not ble.is_connected
+    with pytest.raises(DeviceNotFoundException):
+        await ble.ensure_connected()
+
+
+@pytest.mark.asyncio
+async def test_ble_raises_exception_when_bleak_disconnects_while_connecting(
+    mock_bleak_client_with_disconnect,
 ):
     ble = BLE("00:11:22:33:44:55")
     assert not ble.is_connected
