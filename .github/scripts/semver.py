@@ -8,6 +8,7 @@ class ReleaseNotes:
         self.breaking = []
         self.features = []
         self.fixes = []
+        self.other = []
 
     def add_breaking(self, commit):
         self.breaking.append(commit.removeprefix("fix!").removeprefix("feat!"))
@@ -17,6 +18,9 @@ class ReleaseNotes:
 
     def add_fixes(self, commit):
         self.fixes.append(commit.removeprefix("fix:"))
+    
+    def add_other(self, commit):
+        self.other.append(commit.removeprefix("chore:"))
 
     def __repr__(self):
         text = ""
@@ -26,6 +30,8 @@ class ReleaseNotes:
             text += "## Features\n* " + "\n* ".join(self.features) + "\n\n"
         if self.fixes:
             text += "## Fixes\n* " + "\n* ".join(self.fixes) + "\n\n"
+        if self.other:
+            text += "## Other\n* " + "\n* ".join(self.other) + "\n\n"
         return text
 
 
@@ -59,13 +65,15 @@ def parse_commits(commits: list[str]) -> tuple[ReleaseNotes, dict[str, int]]:
             version_bump["minor"] = 0
             version_bump["patch"] = 0
             notes.add_breaking(commit)
-        if commit.startswith("fix:"):
+        elif commit.startswith("fix:"):
             version_bump["patch"] += 1
             notes.add_fixes(commit)
-        if commit.startswith("feat:"):
+        elif commit.startswith("feat:"):
             version_bump["minor"] += 1
             version_bump["patch"] = 0
             notes.add_features(commit)
+        else:
+            notes.add_other(commit)
 
     return notes, version_bump
 
