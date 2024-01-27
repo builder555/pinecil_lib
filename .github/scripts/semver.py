@@ -18,7 +18,7 @@ class ReleaseNotes:
 
     def add_fixes(self, commit):
         self.fixes.append(commit.removeprefix("fix:"))
-    
+
     def add_other(self, commit):
         self.other.append(commit.removeprefix("chore:"))
 
