@@ -72,6 +72,17 @@ pytest -v
 ptw --runner 'pytest -v'
 ```
 
+### Publish to test.pypi
+
+You will need a PyPi token first: https://test.pypi.org/manage/account/token/
+
+```bash
+poetry config repositories.test-pypi https://test.pypi.org/legacy/
+poetry config pypi-token.test-pypi pypi-XXXXXXXX
+poetry build
+poetry publish -r test-pypi
+```
+
 ## References
 - Originally started as [PineSAM](https://github.com/builder555/PineSAM)
 
