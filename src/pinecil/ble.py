@@ -7,6 +7,7 @@ from bleak.exc import BleakError
 from bleak.backends.characteristic import BleakGATTCharacteristic
 import asyncio
 
+_LOGGER = logging.getLogger(__name__)
 
 class DeviceNotFoundException(Exception):
     message = "Device not found"
@@ -17,14 +18,14 @@ class DeviceDisconnectedException(Exception):
 
 
 async def find_device_addresses(name: str) -> List[str]:
-    logging.info(f'Detecting "{name}"...')
+    _LOGGER.debug('Detecting "%s"...', name)
     devices = await BleakScanner.discover()
     results = []
     for d in devices:
         if d.name is not None and name in d.name.lower():
-            logging.info(f"Found {name} at {d.address}")
+            _LOGGER.debug("Found {%s at %s", name, d.address)
             results.append(d.address)
-    logging.debug(f'Detecting "{name}" DONE')
+    _LOGGER.debug('Detecting "%s" DONE', name)
     return results
 
 
@@ -45,7 +46,7 @@ class BLE:
         return self.__client.is_connected
 
     def __on_disconnected(self, client: BleakClient):
-        logging.info(f"Disconnected from {self.__address}")
+        _LOGGER.debug("Disconnected from %s", self.__address)
         raise DeviceDisconnectedException
 
     async def ensure_connected(self):
@@ -59,12 +60,12 @@ class BLE:
                 return
             await self.__client.connect()
         except (BleakDeviceNotFoundError, asyncio.exceptions.TimeoutError):
-            logging.info(f'Could not find device with "{self.__address}" address')
+            _LOGGER.debug('Could not find device with "%s" address', self.__address)
             raise DeviceNotFoundException
         except BleakError as e:
             err_msg = str(e).lower()
             if "disconnected" in err_msg or "turned off" in err_msg:
-                logging.info(f'Could not find device with "{self.__address}" address')
+                _LOGGER.debug('Could not find device with "%s" address', self.__address)
                 raise DeviceNotFoundException
             else:
                 raise e
@@ -130,6 +131,6 @@ class BLE:
             value (bytes): Value to write
         """
         await self.ensure_connected()
-        logging.debug(f"Writing characteristic {handle.uuid}")
+        _LOGGER.debug("Writing characteristic %s", handle.uuid)
         await self.__client.write_gatt_char(handle, value)
-        logging.debug(f"Writing characteristic {handle.uuid} DONE")
+        _LOGGER.debug("Writing characteristic %s DONE", handle.uuid)

@@ -19,6 +19,8 @@ from .ble import (
 import time
 
 
+_LOGGER = logging.getLogger(__name__)
+
 class ValueOutOfRangeException(Exception):
     message = "Value out of range"
 
@@ -170,13 +172,13 @@ class Pinecil:
         Returns:
             Dict[str, int]: key-value pairs of setting name and value
         """
-        logging.info("REQUEST FOR SETTINGS")
+        _LOGGER.debug("REQUEST FOR SETTINGS")
         while self.is_getting_settings:
             await asyncio.sleep(0.5)
         if time.time() - self.__last_read_settings_time < 2:
             return self.__last_read_settings
         try:
-            logging.info("Reading all settings")
+            _LOGGER.debug("Reading all settings")
             self.is_getting_settings = True
             if not self.is_connected:
                 await self.connect()
@@ -186,7 +188,7 @@ class Pinecil:
             ]
             results = await asyncio.gather(*tasks)
             settings = dict(results)
-            logging.info("Reading all settings DONE")
+            _LOGGER.debug("Reading all settings DONE")
             self.__last_read_settings = settings
             self.__last_read_settings_time = time.time()
             return settings
@@ -204,8 +206,10 @@ class Pinecil:
                 temp_unit = struct.unpack("<H", raw_value)[0]
                 within_limit = temperature_limits[setting][temp_unit]
                 if not within_limit(temperature):
-                    logging.warning(
-                        f"Temp. {temperature} is out of range for setting {setting}"
+                    _LOGGER.debug(
+                        "Temp. %s is out of range for setting %s",
+                        temperature,
+                        setting,
                     )
                     raise ValueOutOfRangeException
                 break
@@ -227,7 +231,7 @@ class Pinecil:
             await self.connect()
         if setting in temperature_limits:
             await self.__ensure_valid_temperature(setting, value)
-        logging.info(f"Setting {value} ({type(value)}) to {setting}")
+        _LOGGER.debug("Setting %s (%s) to %s", value, type(value), setting)
         uuid = self.settings_map.get_uuid(setting)
         for crx in self.crx_settings:
             if crx.uuid == uuid:
@@ -302,25 +306,29 @@ class Pinecil:
                 "Watts": 0
             }
         """
-        logging.debug("GETTING ALL LIVE VALUES")
+        _LOGGER.debug("GETTING ALL LIVE VALUES")
         if not self.is_connected:
             await self.connect()
         values = await self.__read_live_data(self.crx_bulk_data)
-        logging.debug("GETTING ALL LIVE VALUES DONE")
+        _LOGGER.debug("GETTING ALL LIVE VALUES DONE")
         return values
 
 
 def ensure_setting_exists(name: str):
     if name not in names_v220.values() and name not in names_v221beta1.values():
-        logging.warning(f"Setting {name} does not exist")
+        _LOGGER.debug("Setting %s does not exist", name)
         raise InvalidSettingException
 
 
 def ensure_setting_value_within_limits(name: str, value: int):
     min_val, max_val = value_limits[name]
     if not min_val <= value <= max_val:
-        logging.warning(
-            f"Value {value} is out of range for setting {name} ({min_val}-{max_val})"
+        _LOGGER.debug(
+            "Value %s is out of range for setting %s (%s-%s)",
+            value,
+            name,
+            min_val,
+            max_val,
         )
         raise ValueOutOfRangeException
 
