@@ -34,9 +34,9 @@ jobs:
   semver-action:
     needs: test-and-lint
     outputs:
-      tag: ${{ steps.semver-action.outputs.tag }}
+      tag: ${{ steps.semver-action.outputs.version }}
       version: ${{ steps.semver-action.outputs.version }}
-      release_notes: ${{ steps.semver-action.outputs.release_notes }}
+      release-notes: ${{ steps.semver-action.outputs.release-notes }}
     runs-on: ubuntu-latest
 
     steps:
@@ -45,14 +45,21 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
+    - name: Get last version and hash
+      id: last-version
+      run: |
+        LAST_VERSION=$(git describe --tags --abbrev=0 2>/dev/null | tr -d -c 0-9.)
+        COMMIT_HASH=$(git rev-parse v$LAST_VERSION)
+        echo "hash=$COMMIT_HASH" >> $GITHUB_OUTPUT
+        echo "version=$LAST_VERSION" >> $GITHUB_OUTPUT
 
     - name: Semver Action
       id: semver-action
-      run: python .github/scripts/semver.py
+      uses: builder555/simple-semver@v1
+      with:
+        last-version: ${{ steps.last-version.outputs.version }}
+        last-hash: ${{ steps.last-version.outputs.hash }}
+
   
   build-and-release:
     needs: semver-action
@@ -77,8 +84,8 @@ jobs:
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
         git add pyproject.toml
-        git commit -m "chore: bump version to ${{ needs.semver-action.outputs.tag }}"
-        git tag ${{ needs.semver-action.outputs.tag }}
+        git commit -m "chore: bump version to ${{ needs.semver-action.outputs.version }}"
+        git tag v${{ needs.semver-action.outputs.version }}
     
     - name: Push changes
       uses: ad-m/github-push-action@master
@@ -100,8 +107,8 @@ jobs:
       id: create-release
       uses: softprops/action-gh-release@v1
       with:
-        tag_name: ${{ needs.semver-action.outputs.tag }}
-        body: ${{ needs.semver-action.outputs.release_notes }}
+        tag_name: v${{ needs.semver-action.outputs.version }}
+        body: ${{ needs.semver-action.outputs.release-notes }}
         files: |
           dist/*.whl
           dist/*.tar.gz
