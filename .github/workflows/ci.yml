@@ -34,31 +34,16 @@ jobs:
   semver-action:
     needs: test-and-lint
     outputs:
-      tag: ${{ steps.semver-action.outputs.version }}
       version: ${{ steps.semver-action.outputs.version }}
       release-notes: ${{ steps.semver-action.outputs.release-notes }}
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-
-    - name: Get last version and hash
-      id: last-version
-      run: |
-        LAST_VERSION=$(git describe --tags --abbrev=0 2>/dev/null | tr -d -c 0-9.)
-        COMMIT_HASH=$(git rev-parse v$LAST_VERSION)
-        echo "hash=$COMMIT_HASH" >> $GITHUB_OUTPUT
-        echo "version=$LAST_VERSION" >> $GITHUB_OUTPUT
-
     - name: Semver Action
       id: semver-action
-      uses: builder555/simple-semver@v1
+      uses: builder555/simple-semver@v3
       with:
-        last-version: ${{ steps.last-version.outputs.version }}
-        last-hash: ${{ steps.last-version.outputs.hash }}
+        github-token: ${{ secrets.GITHUB_TOKEN }}
 
   
   build-and-release:
